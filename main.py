@@ -124,12 +124,12 @@ class NewsGather:
                         results = self.search_everything(query, start_date, end_date, pages=pages)
                     else:
                         results = self.search_top(query)
-                    self.output(results, database, json_f, pickle_f, rapid=False)
+                    self.output(query, results, database, json_f, pickle_f, rapid=False, database_path=database_path)
                 if self.api_key_rapid is not None:
                     results = self.search_rapid(query, pages=pages)
-                    self.output(results, database, json_f, pickle_f, rapid=True)
+                    self.output(query, results, database, json_f, pickle_f, rapid=True, database_path=database_path)
 
-    def output(self, results, database, json_f, pickle_f, database_path, rapid=False):
+    def output(self, query, results, database, json_f, pickle_f, database_path, rapid=False):
         if database:
             if self.database:
                 self.to_database_news(results)
@@ -152,7 +152,7 @@ class NewsGather:
         if database_path is not None:
             self.database_path = database_path
 
-    def to_database_news(self, results, database_path=None):
+    def to_database_news(self, query, results, database_path=None):
         if self.database is False:
             self.database_setup(database_path)
         self.set_database_path(database_path)
@@ -165,6 +165,7 @@ class NewsGather:
             INSERT OR IGNORE INTO documents(source, author, title, description, url, url_to_image, published_at, content)
             VALUES(?,?,?,?,?,?,?,?)''',
                            [result['source'],
+                            query,
                             result['author'],
                             result['title'],
                             result['description'],
@@ -175,7 +176,7 @@ class NewsGather:
         connection.commit()
         cursor.close()
 
-    def to_database_rapid(self, results, database_path=None):
+    def to_database_rapid(self, query, results, database_path=None):
         if self.database is False:
             self.database_setup(database_path)
         self.set_database_path(database_path)
@@ -188,6 +189,7 @@ class NewsGather:
             INSERT OR IGNORE INTO documents(source, author, title, description, url, url_to_image, published_at, content)
             VALUES(?,?,?,?,?,?,?,?)''',
                            [result['provider'],
+                            query,
                             None,
                             result['title'],
                             result['description'],
@@ -212,6 +214,7 @@ class NewsGather:
                 CREATE TABLE IF NOT EXISTS documents(
                 id integer PRIMARY KEY AUTOINCREMENT,
                 source TEXT,
+                query TEXT,
                 author TEXT,
                 title TEXT,
                 description TEXT,
@@ -233,10 +236,34 @@ class NewsGather:
         connection = sqlite3.connect(self.database_path)
         cursor = connection.cursor()
         cursor.execute('''
-        SELECT description, content, title
+        SELECT id, description, content, title
         FROM documents;''')
         content = cursor.fetchall()
         return content
+
+    def to_master_content(self, contents_table):
+
+        content_without_id = list()
+
+        for content in contents_table:
+            content = [content[1], content[2], content[3]]
+            content_without_id.append(content)
+
+        content_without_id = self.to_single_content(content_without_id)
+
+        content_with_id = list()
+
+        for i in range(len(contents_table)):
+            content_with_id.append([contents_table[i][0], content_without_id[i]])
+
+        return content_with_id
+
+    @staticmethod
+    def to_single_content(contents_table):
+        space = " "
+        for content in contents_table:
+            content = re.sub(r'\n', '', space.join(content))
+        return contents_table
 
     def to_json(self, results):
         if self.verbose:
@@ -375,5 +402,8 @@ def test_function():
 """
 
 if __name__ == '__main__':
+    data = ['thing that we need to do',
+            'second document that we need to do']
     # test_function()
     main()
+
