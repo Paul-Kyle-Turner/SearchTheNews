@@ -1,0 +1,19 @@
+from sklearn.cluster import SpectralClustering
+
+model = SpectralClustering(numberofclusters, n_init=100)
+
+from sklearn.ensemble import RandomForestClassifier
+
+model = RandomForestClassifier(n_estimators=100)
+
+from sklearn.neighbors import KNeighborsClassifier
+
+model = KNeighborsClassifier(n_neighbors=5)
+
+from sklearn.svm import SVC
+
+model = SVC(gamma='auto')
+
+from sklearn.neural_network import MLPClassifier
+
+model = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1)
