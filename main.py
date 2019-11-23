@@ -186,7 +186,7 @@ class NewsGather:
         cursor = connection.cursor()
         for result in results:
             cursor.execute('''
-            INSERT OR IGNORE INTO documents(source, author, title, description, url, url_to_image, published_at, content)
+            INSERT OR IGNORE INTO documents(source, query, author, title, description, url, url_to_image, published_at, content)
             VALUES(?,?,?,?,?,?,?,?)''',
                            [result['provider'],
                             query,
@@ -387,8 +387,13 @@ def main():
     news = NewsGather(api_key_news=api_key, api_key_rapid=rapid,
                       pickle_path=pickle_path, database_path=database_path, json_path=json_file,
                       verbose=args.verbose)
-    news.search_date_range(args.query, search_everywhere=args.everywhere, start_date=start_date, end_date=end_date,
-                           database=args.database, json_f=args.json, pickle_f=args.pickle)
+
+    if start_date is not None and end_date is not None:
+        news.search_date_range(args.query, search_everywhere=args.everywhere, start_date=start_date, end_date=end_date,
+                               database=args.database, json_f=args.json, pickle_f=args.pickle)
+    else:
+        news.search_to_output(args.query, search_everywhere=args.everywhere, start_date=start_date,
+                              database=args.database, json_f=args.json, pickle_f=args.pickle)
 
 
 """
