@@ -4,6 +4,7 @@ import datetime
 from datetime import timedelta
 import sqlite3
 import json
+import numpy as np
 import pandas as pd
 from newsapi import NewsApiClient
 import http.client
@@ -65,9 +66,10 @@ class NewsGather:
     def search_top(self, query):
         if self.verbose:
             print(f"Searching the top news headlines for {query}.")
-        return self.source_to_name(self.news.get_top_headlines(q=query, language='en', country='us'))
+        results = self.source_to_name(self.news.get_top_headlines(q=query, language='en', country='us'))
+        return results
 
-    def search_everything(self, query, start_time, end_time=datetime.datetime.now(), pages=10):
+    def search_everywhere(self, query, start_time, end_time=datetime.datetime.now(), pages=10):
         results = dict()
         for i in range(1, pages):
             if self.verbose:
@@ -106,7 +108,6 @@ class NewsGather:
             results = json.loads(self.replacer(results))['value']
             results = self.rapid_list_fix(results)
             result.append(results)
-
         return result
 
     def search_to_output(self, query, search_everywhere=False, start_date=None, end_date=datetime.datetime.now(),
@@ -121,7 +122,7 @@ class NewsGather:
             else:
                 if self.news is not None:
                     if search_everywhere:
-                        results = self.search_everything(query, start_date, end_date, pages=pages)
+                        results = self.search_everywhere(query, start_date, end_date, pages=pages)
                     else:
                         results = self.search_top(query)
                     self.output(query, results, database, json_f, pickle_f, rapid=False, database_path=database_path)
@@ -131,18 +132,15 @@ class NewsGather:
 
     def output(self, query, results, database, json_f, pickle_f, database_path, rapid=False):
         if database:
-            if self.database:
-                self.to_database_news(query, results)
+            if self.database_path is None:
+                self.set_database_path(database_path)
+            if self.database_path is None:
+                print("FAILED TO SETUP DATABASE PATH")
             else:
-                if self.database_path is None:
-                    self.set_database_path(database_path)
-                if self.database_path is None:
-                    print("FAILED TO SETUP DATABASE PATH")
+                if not rapid:
+                    self.to_database_news(query, results, self.database_path)
                 else:
-                    if not rapid:
-                        self.to_database_news(results, self.database_path)
-                    else:
-                        self.to_database_rapid(results, self.database_path)
+                    self.to_database_rapid(query, results, self.database_path)
         if json_f:
             self.to_json(results)
         if pickle_f:
@@ -162,8 +160,8 @@ class NewsGather:
         cursor = connection.cursor()
         for result in results['articles']:
             cursor.execute('''
-            INSERT OR IGNORE INTO documents(source, author, title, description, url, url_to_image, published_at, content)
-            VALUES(?,?,?,?,?,?,?,?)''',
+            INSERT OR IGNORE INTO documents(source, query, author, title, description, url, url_to_image, published_at, content)
+            VALUES(?,?,?,?,?,?,?,?,?)''',
                            [result['source'],
                             query,
                             result['author'],
@@ -184,10 +182,11 @@ class NewsGather:
             print("Connect to database, placing documents in table.")
         connection = sqlite3.connect(self.database_path)
         cursor = connection.cursor()
+        results = results[0]
         for result in results:
             cursor.execute('''
             INSERT OR IGNORE INTO documents(source, query, author, title, description, url, url_to_image, published_at, content)
-            VALUES(?,?,?,?,?,?,?,?)''',
+            VALUES(?,?,?,?,?,?,?,?,?)''',
                            [result['provider'],
                             query,
                             None,
@@ -380,7 +379,7 @@ def main():
         start_date = datetime.datetime(*map(int, args.start_date))
 
     if args.end_date is None:
-        end_date = None
+        end_date = datetime.datetime.now()
     else:
         end_date = datetime.datetime(*map(int, args.end_date))
 
@@ -389,10 +388,10 @@ def main():
                       verbose=args.verbose)
 
     if start_date is not None and end_date is not None:
-        news.search_date_range(args.query, search_everywhere=args.everywhere, start_date=start_date, end_date=end_date,
+        news.search_date_range(args.query, search_everywhere=True, start_date=start_date, end_date=end_date,
                                database=args.database, json_f=args.json, pickle_f=args.pickle)
     else:
-        news.search_to_output(args.query, search_everywhere=args.everywhere, start_date=start_date,
+        news.search_to_output(args.query, search_everywhere=True, start_date=start_date,
                               database=args.database, json_f=args.json, pickle_f=args.pickle)
 
 
