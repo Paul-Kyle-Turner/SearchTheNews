@@ -139,7 +139,7 @@ class NewsGather:
                 if self.database_path is None:
                     print("FAILED TO SETUP DATABASE PATH")
                 else:
-                    if rapid:
+                    if not rapid:
                         self.to_database_news(results, self.database_path)
                     else:
                         self.to_database_rapid(results, self.database_path)
