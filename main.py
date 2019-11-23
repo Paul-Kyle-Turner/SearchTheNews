@@ -73,7 +73,7 @@ class NewsGather:
         results = dict()
         for i in range(1, pages):
             if self.verbose:
-                print(f"Searching in page {i}, for query {query}.")
+                print(f"Searching in page {i} in newsapi-python, for query {query}.")
             result = self.news.get_everything(q=query, from_param=self.date_to_string(start_time),
                                               to=self.date_to_string(end_time), language='en', sort_by='relevancy')
             results.update(result)
@@ -92,6 +92,8 @@ class NewsGather:
         result = []
 
         for i in range(1, 10):
+            if self.verbose:
+                print(f"Searching in page {i} in rapid, for query {query}.")
             if start_date is not None and end_date is not None:
                 conn.request("GET",
                              f"/api/Search/NewsSearchAPI?fromPublishedDate={start_date}&toPublishedDate={end_date}"
