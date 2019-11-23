@@ -132,7 +132,7 @@ class NewsGather:
     def output(self, query, results, database, json_f, pickle_f, database_path, rapid=False):
         if database:
             if self.database:
-                self.to_database_news(results)
+                self.to_database_news(query, results)
             else:
                 if self.database_path is None:
                     self.set_database_path(database_path)
